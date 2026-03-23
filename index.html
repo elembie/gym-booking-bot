@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kronsky Score Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .screen { display: none; width: 100%; max-width: 700px; }
+    .screen.active { display: block; }
+
+    h1 { font-size: 2rem; text-align: center; margin-bottom: 0.25rem; color: #e0b44a; }
+    h2 { font-size: 1.3rem; margin-bottom: 1rem; color: #e0b44a; }
+    .subtitle { text-align: center; color: #aaa; margin-bottom: 2rem; }
+
+    .card {
+      background: #16213e;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    label { display: block; margin-bottom: 0.25rem; font-size: 0.85rem; color: #aaa; }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      border-radius: 8px;
+      border: 1px solid #334;
+      background: #0f3460;
+      color: #eee;
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    input[type="number"] { text-align: center; }
+
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: 8px;
+      border: none;
+      background: #e0b44a;
+      color: #1a1a2e;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    button:hover { opacity: 0.85; }
+    button.secondary {
+      background: #334;
+      color: #eee;
+      font-weight: 400;
+      margin-top: 0.5rem;
+    }
+
+    .player-row {
+      display: grid;
+      grid-template-columns: 1fr 90px 90px;
+      gap: 0.5rem;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+    .player-row .name { font-weight: 600; padding: 0.4rem 0; }
+    .player-row input[type="number"] { margin-bottom: 0; }
+
+    .round-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .round-badge {
+      background: #e0b44a;
+      color: #1a1a2e;
+      font-weight: 700;
+      padding: 0.3rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+    }
+
+    .phase-label {
+      font-size: 0.8rem;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .scoreboard {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+    }
+    .scoreboard th, .scoreboard td {
+      padding: 0.5rem 0.75rem;
+      text-align: center;
+      border-bottom: 1px solid #223;
+    }
+    .scoreboard th { color: #aaa; font-size: 0.8rem; text-transform: uppercase; }
+    .scoreboard td:first-child { text-align: left; }
+    .scoreboard th:first-child { text-align: left; }
+    .scoreboard tr:last-child td { border-bottom: none; }
+    .bonus { color: #4caf50; font-size: 0.8rem; }
+    .total-row td { font-weight: 700; color: #e0b44a; }
+
+    .winner-card {
+      text-align: center;
+      padding: 2rem;
+    }
+    .winner-name { font-size: 2rem; font-weight: 700; color: #e0b44a; margin: 0.5rem 0; }
+    .trophy { font-size: 3rem; }
+
+    .final-table td, .final-table th { padding: 0.6rem 1rem; }
+    .final-table tr.winner-row td { color: #e0b44a; font-weight: 700; }
+
+    .add-player-btn {
+      background: none;
+      border: 1px dashed #446;
+      color: #88a;
+      font-weight: 400;
+      margin-top: 0.5rem;
+    }
+    .add-player-btn:hover { background: #223; opacity: 1; }
+
+    .player-input-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      align-items: center;
+    }
+    .player-input-row input { margin-bottom: 0; flex: 1; }
+    .remove-btn {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      background: #334;
+      color: #888;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+      border-radius: 8px;
+    }
+    .remove-btn:hover { background: #553; color: #e0b44a; opacity: 1; }
+
+    .col-header { color: #aaa; font-size: 0.75rem; text-transform: uppercase; text-align: center; }
+  </style>
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div id="setup" class="screen active">
+  <h1>Kronsky</h1>
+  <p class="subtitle">Score Tracker &mdash; 10 Rounds</p>
+  <div class="card">
+    <h2>Players</h2>
+    <div id="player-inputs"></div>
+    <button class="add-player-btn" onclick="addPlayerInput()">+ Add Player</button>
+  </div>
+  <button onclick="startGame()">Start Game</button>
+</div>
+
+<!-- GUESS PHASE -->
+<div id="guess-phase" class="screen">
+  <h1>Kronsky</h1>
+  <div class="card">
+    <div class="round-info">
+      <span class="round-badge" id="guess-round-label">Round 1 of 10</span>
+      <span class="phase-label">Make your guesses</span>
+    </div>
+    <div class="player-row" style="margin-bottom:0.25rem">
+      <div></div>
+      <div class="col-header">Guess</div>
+      <div></div>
+    </div>
+    <div id="guess-inputs"></div>
+  </div>
+  <button onclick="submitGuesses()">Lock In Guesses</button>
+</div>
+
+<!-- ACTUAL PHASE -->
+<div id="actual-phase" class="screen">
+  <h1>Kronsky</h1>
+  <div class="card">
+    <div class="round-info">
+      <span class="round-badge" id="actual-round-label">Round 1 of 10</span>
+      <span class="phase-label">Enter actual scores</span>
+    </div>
+    <div class="player-row" style="margin-bottom:0.25rem">
+      <div></div>
+      <div class="col-header">Guessed</div>
+      <div class="col-header">Actual</div>
+    </div>
+    <div id="actual-inputs"></div>
+  </div>
+  <button onclick="submitActuals()">Submit Round</button>
+</div>
+
+<!-- ROUND SUMMARY -->
+<div id="round-summary" class="screen">
+  <h1>Kronsky</h1>
+  <div class="card">
+    <div class="round-info">
+      <span class="round-badge" id="summary-round-label">Round 1</span>
+      <span class="phase-label">Round Summary</span>
+    </div>
+    <table class="scoreboard" id="summary-table"></table>
+  </div>
+  <div class="card">
+    <h2>Totals</h2>
+    <table class="scoreboard" id="totals-table"></table>
+  </div>
+  <button id="next-btn" onclick="nextRound()">Next Round</button>
+</div>
+
+<!-- FINAL SCREEN -->
+<div id="final-screen" class="screen">
+  <h1>Kronsky</h1>
+  <div class="card winner-card">
+    <div class="trophy">&#127942;</div>
+    <div style="color:#aaa; margin-bottom:0.25rem">Winner</div>
+    <div class="winner-name" id="winner-name"></div>
+  </div>
+  <div class="card">
+    <h2>Final Scores</h2>
+    <table class="scoreboard final-table" id="final-table"></table>
+  </div>
+  <button onclick="newGame()">New Game</button>
+</div>
+
+<script>
+  const TOTAL_ROUNDS = 10;
+
+  let state = loadState() || null;
+
+  function loadState() {
+    try {
+      const s = localStorage.getItem('kronsky');
+      return s ? JSON.parse(s) : null;
+    } catch { return null; }
+  }
+
+  function saveState() {
+    localStorage.setItem('kronsky', JSON.stringify(state));
+  }
+
+  function clearState() {
+    localStorage.removeItem('kronsky');
+  }
+
+  // ---- Setup ----
+
+  function addPlayerInput(name = '') {
+    const container = document.getElementById('player-inputs');
+    if (container.children.length >= 5) return;
+    const row = document.createElement('div');
+    row.className = 'player-input-row';
+    row.innerHTML = `
+      <input type="text" placeholder="Player name" value="${name}" maxlength="20" />
+      <button class="remove-btn" onclick="removePlayerInput(this)">&#10005;</button>
+    `;
+    container.appendChild(row);
+    updateRemoveButtons();
+  }
+
+  function removePlayerInput(btn) {
+    const container = document.getElementById('player-inputs');
+    if (container.children.length <= 2) return;
+    btn.parentElement.remove();
+    updateRemoveButtons();
+  }
+
+  function updateRemoveButtons() {
+    const container = document.getElementById('player-inputs');
+    const btns = container.querySelectorAll('.remove-btn');
+    btns.forEach(b => b.disabled = container.children.length <= 2);
+  }
+
+  function startGame() {
+    const inputs = document.querySelectorAll('#player-inputs input[type="text"]');
+    const names = Array.from(inputs).map(i => i.value.trim()).filter(n => n);
+    if (names.length < 2) { alert('Enter at least 2 player names.'); return; }
+
+    state = {
+      players: names,
+      round: 1,
+      guesses: [],       // guesses[round-1][playerIdx]
+      actuals: [],       // actuals[round-1][playerIdx]
+      totals: new Array(names.length).fill(0),
+      phase: 'guess'     // 'guess' | 'actual' | 'summary' | 'done'
+    };
+    saveState();
+    showScreen();
+  }
+
+  // ---- Navigation ----
+
+  function showScreen() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    if (!state) {
+      initSetup();
+      document.getElementById('setup').classList.add('active');
+      return;
+    }
+    switch (state.phase) {
+      case 'guess':   renderGuessPhase();   document.getElementById('guess-phase').classList.add('active');   break;
+      case 'actual':  renderActualPhase();  document.getElementById('actual-phase').classList.add('active');  break;
+      case 'summary': renderSummary();      document.getElementById('round-summary').classList.add('active'); break;
+      case 'done':    renderFinal();        document.getElementById('final-screen').classList.add('active');  break;
+    }
+  }
+
+  function initSetup() {
+    document.getElementById('player-inputs').innerHTML = '';
+    addPlayerInput();
+    addPlayerInput();
+  }
+
+  // ---- Guess Phase ----
+
+  function renderGuessPhase() {
+    document.getElementById('guess-round-label').textContent = `Round ${state.round} of ${TOTAL_ROUNDS}`;
+    const container = document.getElementById('guess-inputs');
+    container.innerHTML = state.players.map((name, i) => `
+      <div class="player-row">
+        <div class="name">${esc(name)}</div>
+        <input type="number" id="guess-${i}" min="0" placeholder="0" />
+        <div></div>
+      </div>
+    `).join('');
+  }
+
+  function submitGuesses() {
+    const guesses = state.players.map((_, i) => {
+      const v = parseInt(document.getElementById(`guess-${i}`).value);
+      return isNaN(v) ? null : v;
+    });
+    if (guesses.some(g => g === null || g < 0)) {
+      alert('Enter a valid guess (0 or more) for every player.');
+      return;
+    }
+    state.guesses[state.round - 1] = guesses;
+    state.phase = 'actual';
+    saveState();
+    showScreen();
+  }
+
+  // ---- Actual Phase ----
+
+  function renderActualPhase() {
+    document.getElementById('actual-round-label').textContent = `Round ${state.round} of ${TOTAL_ROUNDS}`;
+    const guesses = state.guesses[state.round - 1];
+    const container = document.getElementById('actual-inputs');
+    container.innerHTML = state.players.map((name, i) => `
+      <div class="player-row">
+        <div class="name">${esc(name)}</div>
+        <div style="text-align:center; color:#aaa">${guesses[i]}</div>
+        <input type="number" id="actual-${i}" min="0" placeholder="0" />
+      </div>
+    `).join('');
+  }
+
+  function submitActuals() {
+    const actuals = state.players.map((_, i) => {
+      const v = parseInt(document.getElementById(`actual-${i}`).value);
+      return isNaN(v) ? null : v;
+    });
+    if (actuals.some(a => a === null || a < 0)) {
+      alert('Enter a valid score (0 or more) for every player.');
+      return;
+    }
+
+    const guesses = state.guesses[state.round - 1];
+    state.actuals[state.round - 1] = actuals;
+
+    // Update running totals
+    actuals.forEach((actual, i) => {
+      const bonus = (actual === guesses[i]) ? 10 : 0;
+      state.totals[i] += actual + bonus;
+    });
+
+    state.phase = 'summary';
+    saveState();
+    showScreen();
+  }
+
+  // ---- Summary ----
+
+  function renderSummary() {
+    document.getElementById('summary-round-label').textContent = `Round ${state.round}`;
+    const guesses = state.guesses[state.round - 1];
+    const actuals = state.actuals[state.round - 1];
+
+    // Round detail table
+    const summaryTable = document.getElementById('summary-table');
+    summaryTable.innerHTML = `
+      <tr>
+        <th>Player</th><th>Guessed</th><th>Actual</th><th>Score</th>
+      </tr>
+      ${state.players.map((name, i) => {
+        const correct = actuals[i] === guesses[i];
+        const roundScore = actuals[i] + (correct ? 10 : 0);
+        return `<tr>
+          <td>${esc(name)}</td>
+          <td>${guesses[i]}</td>
+          <td>${actuals[i]}</td>
+          <td>${actuals[i]}${correct ? ' <span class="bonus">+10</span>' : ''} = <strong>${roundScore}</strong></td>
+        </tr>`;
+      }).join('')}
+    `;
+
+    // Running totals table
+    const totalsTable = document.getElementById('totals-table');
+    const sorted = state.players.map((name, i) => ({ name, total: state.totals[i] }))
+                                .sort((a, b) => b.total - a.total);
+    totalsTable.innerHTML = `
+      <tr><th>Player</th><th>Total</th></tr>
+      ${sorted.map(p => `<tr><td>${esc(p.name)}</td><td><strong>${p.total}</strong></td></tr>`).join('')}
+    `;
+
+    const nextBtn = document.getElementById('next-btn');
+    nextBtn.textContent = state.round === TOTAL_ROUNDS ? 'See Final Results' : 'Next Round';
+  }
+
+  function nextRound() {
+    if (state.round === TOTAL_ROUNDS) {
+      state.phase = 'done';
+    } else {
+      state.round++;
+      state.phase = 'guess';
+    }
+    saveState();
+    showScreen();
+  }
+
+  // ---- Final ----
+
+  function renderFinal() {
+    const ranked = state.players.map((name, i) => ({ name, total: state.totals[i] }))
+                                .sort((a, b) => b.total - a.total);
+    const winner = ranked[0];
+
+    document.getElementById('winner-name').textContent = winner.name;
+
+    const table = document.getElementById('final-table');
+    table.innerHTML = `
+      <tr><th>#</th><th>Player</th><th>Total</th></tr>
+      ${ranked.map((p, idx) => `
+        <tr class="${idx === 0 ? 'winner-row' : ''}">
+          <td>${idx + 1}</td>
+          <td>${esc(p.name)}</td>
+          <td>${p.total}</td>
+        </tr>
+      `).join('')}
+    `;
+  }
+
+  function newGame() {
+    clearState();
+    state = null;
+    initSetup();
+    showScreen();
+  }
+
+  function esc(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Init
+  if (state) {
+    showScreen();
+  } else {
+    initSetup();
+  }
+</script>
+</body>
+</html>
