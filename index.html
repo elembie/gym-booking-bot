@@ -169,7 +169,7 @@
 
     .col-header { color: #aaa; font-size: 0.75rem; text-transform: uppercase; text-align: center; }
 
-    .suit-badge {
+    .suit-badge, .cards-badge {
       font-size: 0.95rem;
       font-weight: 700;
       padding: 0.3rem 0.7rem;
@@ -180,6 +180,7 @@
     }
     .suit-badge.red { color: #e05555; border-color: #e05555; }
     .suit-badge.black { color: #ccc; border-color: #667; }
+    .cards-badge { color: #7eb8f7; border-color: #7eb8f7; }
 
     .dealer-label {
       font-size: 0.8rem;
@@ -210,6 +211,7 @@
       <div class="round-info-top">
         <span class="round-badge" id="guess-round-label">Round 1 of 10</span>
         <span id="guess-suit-badge"></span>
+        <span id="guess-cards-badge"></span>
       </div>
       <div class="round-info-bottom">
         <span id="guess-dealer-label"></span>
@@ -234,6 +236,7 @@
       <div class="round-info-top">
         <span class="round-badge" id="actual-round-label">Round 1 of 10</span>
         <span id="actual-suit-badge"></span>
+        <span id="actual-cards-badge"></span>
       </div>
       <div class="round-info-bottom">
         <span id="actual-dealer-label"></span>
@@ -258,6 +261,7 @@
       <div class="round-info-top">
         <span class="round-badge" id="summary-round-label">Round 1</span>
         <span id="summary-suit-badge"></span>
+        <span id="summary-cards-badge"></span>
       </div>
       <div class="round-info-bottom">
         <span id="summary-dealer-label"></span>
@@ -309,6 +313,11 @@
   function dealerLabelHTML(round) {
     const name = state.players[(round - 1) % state.players.length];
     return `<span class="dealer-label">Dealer: <strong>${esc(name)}</strong></span>`;
+  }
+
+  function cardsBadgeHTML(round) {
+    const cards = TOTAL_ROUNDS + 1 - round;
+    return `<span class="cards-badge">${cards} card${cards !== 1 ? 's' : ''}</span>`;
   }
 
   let state = loadState() || null;
@@ -401,6 +410,7 @@
   function renderGuessPhase() {
     document.getElementById('guess-round-label').textContent = `Round ${state.round} of ${TOTAL_ROUNDS}`;
     document.getElementById('guess-suit-badge').innerHTML = suitBadgeHTML(state.round);
+    document.getElementById('guess-cards-badge').innerHTML = cardsBadgeHTML(state.round);
     document.getElementById('guess-dealer-label').innerHTML = dealerLabelHTML(state.round);
     const container = document.getElementById('guess-inputs');
     container.innerHTML = state.players.map((name, i) => `
@@ -432,6 +442,7 @@
   function renderActualPhase() {
     document.getElementById('actual-round-label').textContent = `Round ${state.round} of ${TOTAL_ROUNDS}`;
     document.getElementById('actual-suit-badge').innerHTML = suitBadgeHTML(state.round);
+    document.getElementById('actual-cards-badge').innerHTML = cardsBadgeHTML(state.round);
     document.getElementById('actual-dealer-label').innerHTML = dealerLabelHTML(state.round);
     const guesses = state.guesses[state.round - 1];
     const container = document.getElementById('actual-inputs');
@@ -473,6 +484,7 @@
   function renderSummary() {
     document.getElementById('summary-round-label').textContent = `Round ${state.round}`;
     document.getElementById('summary-suit-badge').innerHTML = suitBadgeHTML(state.round);
+    document.getElementById('summary-cards-badge').innerHTML = cardsBadgeHTML(state.round);
     document.getElementById('summary-dealer-label').innerHTML = dealerLabelHTML(state.round);
     const guesses = state.guesses[state.round - 1];
     const actuals = state.actuals[state.round - 1];
